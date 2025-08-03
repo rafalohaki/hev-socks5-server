@@ -33,7 +33,7 @@ RUN apk update \
 
 #
 # Runtime stage
-
+#
 FROM alpine
 
 ENV TZ=Europe/Warsaw
