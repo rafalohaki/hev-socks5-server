@@ -18,20 +18,20 @@ services:
     image: hev-socks5-server:latest
     container_name: hev-socks5-server
     
-    # Restart policy - disabled for debugging
-    restart: "no"
+    # Restart policy
+    restart: unless-stopped
     
-    # Network mode: bridge for debugging
-    # network_mode: "host"
+    # Network mode: host for maximum performance
+    network_mode: "host"
     
-    # Port mapping for bridge network
-    ports:
-      - "${SOCKS5_PORT:-1080}:${SOCKS5_PORT:-1080}/tcp"
-      - "${SOCKS5_PORT:-1080}:${SOCKS5_PORT:-1080}/udp"
+    # Port mapping not needed with host network
+    # ports:
+    #   - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/tcp"
+    #   - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/udp"
     
     # Environment variables - customize in .env file
     environment:
-      - PORT=${SOCKS5_PORT:-1080}
+      - PORT=${SOCKS5_PORT:-2137}
       - LISTEN_ADDRESS=${LISTEN_ADDRESS:-::}
       - AUTH=${SOCKS5_AUTH:-}
       - TZ=${TIMEZONE:-Europe/Warsaw}
