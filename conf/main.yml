@@ -1,8 +1,8 @@
-# Main configuration for hev-socks5-server
+# Main configuration for hev-socks5-server - Optimized
 
 main:
-  # Worker threads
-  workers: 4
+  # Worker threads - optimized for performance
+  workers: 8
   # Listen port
   port: 1080
   # Listen address (ipv4|ipv6)
@@ -32,20 +32,20 @@ main:
 #  username:
 #  password:
 
-#misc:
-   # task stack size (bytes)
-#  task-stack-size: 8192
-   # udp recv buffer size (bytes)
-#  udp-recv-buffer-size: 524288
-   # connect timeout (ms)
-#  connect-timeout: 5000
-   # read-write timeout (ms)
-#  read-write-timeout: 60000
-   # stdout, stderr or file-path
-#  log-file: stderr
-   # debug, info, warn or error
-#  log-level: warn
-   # If present, run as a daemon with this pid file
-#  pid-file: /run/hev-socks5-server.pid
-   # If present, set rlimit nofile; else use default value
-#  limit-nofile: 65535
+misc:
+  # Task stack size (bytes) - increased for better performance
+  task-stack-size: 16384
+  # UDP recv buffer size (bytes) - optimized for high throughput
+  udp-recv-buffer-size: 1048576
+  # Connect timeout (ms) - faster connection establishment
+  connect-timeout: 3000
+  # Read-write timeout (ms) - optimized for stability
+  read-write-timeout: 30000
+  # Log output - file for better performance than stderr
+  log-file: /app/logs/socks5.log
+  # Log level - info for monitoring without debug overhead
+  log-level: info
+  # If present, run as a daemon with this pid file
+  pid-file: /app/socks5.pid
+  # Increase file descriptor limit for high concurrency
+  limit-nofile: 100000

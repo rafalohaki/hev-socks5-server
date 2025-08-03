@@ -1,63 +1,97 @@
-# Dockerfile for hev-socks5-server
+# Optimized multi-stage Dockerfile for hev-socks5-server
 
 #
-# Build stage
+# Build stage - Optimized for fast builds and minimal size
 #
-FROM alpine AS builder
+FROM alpine:3.19 AS builder
+
+# Install build dependencies
+RUN apk add --no-cache --virtual .build-deps \
+    build-base \
+    yaml-dev \
+    git \
+    cmake \
+    ninja
 
 # Set the working directory for the build stage
 WORKDIR /tmp/hev-socks5-server
 
-# Copy the local repository content to the working directory in the container
-COPY . .
+# Copy only necessary files first for better layer caching
+COPY .git ./.git/
+COPY .gitmodules ./
+COPY third-part ./third-part/
+COPY src ./src/
+COPY Makefile build.mk ./
+COPY conf ./conf/
 
-# Install build dependencies (including Git), initialize submodules, build, and cleanup
-RUN apk update \
- && apk add --no-cache --virtual .build-deps \
-      build-base yaml-dev git \
- && echo "Current directory: $(pwd)" \
- && echo "Listing files: $(ls -la)" \
- && echo "Initializing and updating submodules..." \
- && git submodule update --init --recursive \
- && echo "Building with make..." \
- && make -j"$(nproc)" \
- && echo "Installing..." \
- && make install INSTDIR="/app" \
- && echo "Cleaning build artifacts..." \
- && make clean \
- && echo "Cleaning up build environment..." \
- && cd / \
- && rm -rf /tmp/hev-socks5-server \
- && apk del .build-deps \
- && rm -rf /var/cache/apk/*
+# Initialize submodules and build
+RUN set -ex && \
+    echo "Initializing submodules..." && \
+    git submodule update --init --recursive && \
+    echo "Building optimized version..." && \
+    make -j"$(nproc)" ENABLE_STATIC=1 && \
+    echo "Installing to /app..." && \
+    make install INSTDIR="/app" && \
+    echo "Stripping binary for smaller size..." && \
+    strip /app/bin/hev-socks5-server && \
+    echo "Build completed successfully"
 
 #
-# Runtime stage
+# Runtime stage - Security hardened and optimized
 #
-FROM alpine
+FROM alpine:3.19
 
+# Set default timezone
 ENV TZ=Europe/Warsaw
 
-# Add runtime dependencies
-RUN apk update \
-  && apk add --no-cache tzdata yaml \
-  && rm -rf /var/cache/apk/*
+# Create dedicated user for security
+RUN addgroup -g 1000 -S socks5 && \
+    adduser -u 1000 -S socks5 -G socks5
 
-# Copy the built application from the builder stage
-COPY --from=builder /app /app/
+# Install only runtime dependencies
+RUN apk add --no-cache \
+    tzdata \
+    yaml \
+    ca-certificates \
+    && rm -rf /var/cache/apk/*
 
-# Ensure the configuration directory (or at least the file) is writable by the 'nobody' user
-# if the entrypoint script needs to modify it.
-# /app/etc is a common convention. If your config file is directly in /app/
-# you might chown /app/hev-socks5-server.yml if it exists, or ensure /app/etc is created and chowned.
-# Assuming /app/etc will contain the config file as per previous entrypoint scripts.
-RUN mkdir -p /app/etc && chown nobody:nobody /app/etc
+# Create required directories with proper permissions
+RUN mkdir -p /app/{bin,etc,logs,tmp} && \
+    chown -R socks5:socks5 /app
 
-# Copy the entrypoint script
-# Assuming your entrypoint.sh is in a 'docker' subdirectory of your build context.
-# If it's at the root of your build context with the Dockerfile, change the source path.
-COPY docker/entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
+# Copy the built application from builder stage
+COPY --from=builder --chown=socks5:socks5 /app/bin /app/bin/
 
-USER nobody
+# Copy configuration files
+COPY --chown=socks5:socks5 conf/main.yml /app/etc/hev-socks5-server.yml
+
+# Copy and set permissions for entrypoint script
+COPY --chmod=755 --chown=socks5:socks5 docker/entrypoint.sh /app/entrypoint.sh
+
+# Security hardening
+RUN chmod 755 /app/entrypoint.sh && \
+    chmod 755 /app/bin/hev-socks5-server && \
+    # Remove unnecessary packages and clear cache
+    rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
+
+# Switch to non-root user
+USER socks5
+
+# Set working directory
+WORKDIR /app
+
+# Health check for container health monitoring
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD netstat -tlnp 2>/dev/null | grep ":${PORT:-1080}" || exit 1
+
+# Expose ports (both TCP and UDP for SOCKS5)
+EXPOSE 1080/tcp 1080/udp
+
+# Use exec form for better signal handling
 ENTRYPOINT ["/app/entrypoint.sh"]
+
+# Add labels for better container management
+LABEL maintainer="your-email@domain.com" \
+      description="High-performance SOCKS5 proxy server" \
+      version="optimized" \
+      org.opencontainers.image.source="https://github.com/heiher/hev-socks5-server"

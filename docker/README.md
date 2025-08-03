@@ -20,3 +20,10 @@ docker run -d \
   -e AUTH="rafal:kozak" \
   hev-socks5-server
 ```
+
+```bash
+docker compose down
+docker compose build
+docker compose up -d
+
+```

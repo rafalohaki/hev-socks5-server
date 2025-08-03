@@ -1,0 +1,111 @@
+# Docker Compose configuration for hev-socks5-server
+# Usage:
+#   docker compose up -d    # Start in background
+#   docker compose down     # Stop and remove
+#   docker compose build    # Rebuild image
+#   docker compose logs -f  # Follow logs
+
+version: '3.8'
+
+services:
+  hev-socks5-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    
+    image: hev-socks5-server:latest
+    container_name: hev-socks5-server
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Port mapping - change left side to your desired host port
+    ports:
+      - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/tcp"
+      - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/udp"
+    
+    # Environment variables - customize in .env file
+    environment:
+      - PORT=${SOCKS5_PORT:-2137}
+      - LISTEN_ADDRESS=${LISTEN_ADDRESS:-::}
+      - AUTH=${SOCKS5_AUTH:-}
+      - TZ=${TIMEZONE:-Europe/Warsaw}
+    
+    # Volume mounts for persistence
+    volumes:
+      # Logs directory (persistent)
+      - ./logs:/app/logs:rw
+      # Configuration override (optional)
+      - ./conf/main.yml:/app/etc/hev-socks5-server.yml:ro
+    
+    # Security settings
+    security_opt:
+      - no-new-privileges:true
+    
+    # Drop all capabilities and only add what's needed
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '1.0'
+        reservations:
+          memory: 64M
+          cpus: '0.1'
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "netstat", "-tlnp", "2>/dev/null", "|", "grep", ":${SOCKS5_PORT:-2137}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Network configuration
+    networks:
+      - socks5-network
+
+# Optional: monitoring service with basic stats
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: socks5-watchtower
+    restart: unless-stopped
+    environment:
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=86400  # Check daily
+      - WATCHTOWER_INCLUDE_STOPPED=true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: hev-socks5-server
+    profiles:
+      - monitoring
+    networks:
+      - socks5-network
+
+# Custom network for isolation
+networks:
+  socks5-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+# Named volumes for data persistence
+volumes:
+  socks5-logs:
+    driver: local
