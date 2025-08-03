@@ -25,6 +25,7 @@
 #include "hev-logger.h"
 
 #include "hev-misc.h"
+#include "../string_utils.h"
 
 int
 hev_netaddr_resolve (struct sockaddr_in6 *daddr, const char *addr,
@@ -116,7 +117,9 @@ set_sock_bind (int fd, const char *iface)
 #if defined(__linux__)
     struct ifreq ifr = { 0 };
 
-    strncpy (ifr.ifr_name, iface, sizeof (ifr.ifr_name) - 1);
+    if (safe_strncpy(ifr.ifr_name, iface, sizeof(ifr.ifr_name)) != 0) {
+        return -1;
+    }
     res = setsockopt (fd, SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof (ifr));
 #elif defined(__APPLE__) || defined(__MACH__)
     int i;

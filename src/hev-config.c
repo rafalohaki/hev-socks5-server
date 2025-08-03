@@ -16,6 +16,8 @@
 
 #include "hev-logger.h"
 #include "hev-config.h"
+#include "string_utils.h"
+#include "error_codes.h"
 
 static unsigned int workers;
 static int listen_ipv6_only;
@@ -123,25 +125,89 @@ hev_config_parse_main (yaml_document_t *doc, yaml_node_t *base)
     }
 #endif
 
-    strncpy (listen_port, port, 8 - 1);
-    strncpy (listen_address, addr, 256 - 1);
+    /* Validate and safely copy port */
+    if (port && validate_port(port) == 0) {
+        if (safe_strncpy(listen_port, port, sizeof(listen_port)) != 0) {
+            return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+        }
+    } else if (port) {
+        return HEV_ERROR_CONFIG_INVALID_PORT;
+    }
 
-    if (udp_port)
-        strncpy (udp_listen_port, udp_port, 8 - 1);
-    if (udp_addr)
-        strncpy (udp_listen_address, udp_addr, 256 - 1);
+    /* Validate and safely copy address */
+    if (addr && validate_ip_address(addr) == 0) {
+        if (safe_strncpy(listen_address, addr, sizeof(listen_address)) != 0) {
+            return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+        }
+    } else if (addr) {
+        return HEV_ERROR_CONFIG_INVALID_IP;
+    }
 
-    if (bind_saddr4 && bind_saddr4[0] != '\0')
-        strncpy (bind_address[0], bind_saddr4, 256 - 1);
-    else if (bind_saddr && bind_saddr[0] != '\0')
-        strncpy (bind_address[0], bind_saddr, 256 - 1);
-    if (bind_saddr6 && bind_saddr6[0] != '\0')
-        strncpy (bind_address[1], bind_saddr6, 256 - 1);
-    else if (bind_saddr && bind_saddr[0] != '\0')
-        strncpy (bind_address[1], bind_saddr, 256 - 1);
+    /* Validate and safely copy UDP port */
+    if (udp_port) {
+        if (validate_port(udp_port) == 0) {
+            if (safe_strncpy(udp_listen_port, udp_port, sizeof(udp_listen_port)) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        } else {
+            return HEV_ERROR_CONFIG_INVALID_PORT;
+        }
+    }
 
-    if (bind_iface)
-        strncpy (bind_interface, bind_iface, 256 - 1);
+    /* Validate and safely copy UDP address */
+    if (udp_addr) {
+        if (validate_ip_address(udp_addr) == 0) {
+            if (safe_strncpy(udp_listen_address, udp_addr, sizeof(udp_listen_address)) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        } else {
+            return HEV_ERROR_CONFIG_INVALID_IP;
+        }
+    }
+
+    /* Safely copy bind addresses with validation */
+    if (bind_saddr4 && bind_saddr4[0] != '\0') {
+        if (validate_ip_address(bind_saddr4) == 0) {
+            if (safe_strncpy(bind_address[0], bind_saddr4, sizeof(bind_address[0])) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        } else {
+            return HEV_ERROR_CONFIG_INVALID_IP;
+        }
+    } else if (bind_saddr && bind_saddr[0] != '\0') {
+        if (validate_ip_address(bind_saddr) == 0) {
+            if (safe_strncpy(bind_address[0], bind_saddr, sizeof(bind_address[0])) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        } else {
+            return HEV_ERROR_CONFIG_INVALID_IP;
+        }
+    }
+
+    if (bind_saddr6 && bind_saddr6[0] != '\0') {
+        if (validate_ip_address(bind_saddr6) == 0) {
+            if (safe_strncpy(bind_address[1], bind_saddr6, sizeof(bind_address[1])) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        } else {
+            return HEV_ERROR_CONFIG_INVALID_IP;
+        }
+    } else if (bind_saddr && bind_saddr[0] != '\0') {
+        if (validate_ip_address(bind_saddr) == 0) {
+            if (safe_strncpy(bind_address[1], bind_saddr, sizeof(bind_address[1])) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        } else {
+            return HEV_ERROR_CONFIG_INVALID_IP;
+        }
+    }
+
+    /* Safely copy bind interface */
+    if (bind_iface) {
+        if (safe_strncpy(bind_interface, bind_iface, sizeof(bind_interface)) != 0) {
+            return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+        }
+    }
 
     if (addr_type) {
         if (0 == strcmp (addr_type, "ipv4"))
@@ -192,10 +258,16 @@ hev_config_parse_auth (yaml_document_t *doc, yaml_node_t *base)
     }
 
     if (file) {
-        strncpy (auth_file, file, 1023);
+        if (safe_strncpy(auth_file, file, sizeof(auth_file)) != 0) {
+            return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+        }
     } else if (user && pass) {
-        strncpy (username, user, 255);
-        strncpy (password, pass, 255);
+        if (safe_strncpy(username, user, sizeof(username)) != 0) {
+            return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+        }
+        if (safe_strncpy(password, pass, sizeof(password)) != 0) {
+            return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+        }
     }
 
     return 0;
@@ -248,10 +320,15 @@ hev_config_parse_misc (yaml_document_t *doc, yaml_node_t *base)
             connect_timeout = strtoul (value, NULL, 10);
         else if (0 == strcmp (key, "read-write-timeout"))
             read_write_timeout = strtoul (value, NULL, 10);
-        else if (0 == strcmp (key, "pid-file"))
-            strncpy (pid_file, value, 1024 - 1);
-        else if (0 == strcmp (key, "log-file"))
-            strncpy (log_file, value, 1024 - 1);
+        else if (0 == strcmp (key, "pid-file")) {
+            if (safe_strncpy(pid_file, value, sizeof(pid_file)) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        } else if (0 == strcmp (key, "log-file")) {
+            if (safe_strncpy(log_file, value, sizeof(log_file)) != 0) {
+                return HEV_ERROR_STRING_BUFFER_OVERFLOW;
+            }
+        }
         else if (0 == strcmp (key, "log-level"))
             log_level = hev_config_parse_log_level (value);
         else if (0 == strcmp (key, "limit-nofile"))
