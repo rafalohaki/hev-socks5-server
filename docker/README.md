@@ -16,7 +16,7 @@ docker run -d \
   --name hev-socks5-server \
   --restart always \
   --net host \
-  -e PORT=1081 \
-  -e AUTH="user:pass" \
+  -e PORT=2137 \
+  -e AUTH="rafal:kozak" \
   hev-socks5-server
 ```
