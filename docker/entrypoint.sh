@@ -146,9 +146,14 @@ log_info "  Authentication: $([ -n "$AUTH" ] && echo "Enabled" || echo "Disabled
 log_info "  Timezone: ${TZ:-system default}"
 log_info "  Log Directory: $LOG_DIR"
 
-# Final configuration check
-if ! /app/bin/hev-socks5-server --help >/dev/null 2>&1; then
-    log_error "hev-socks5-server binary check failed"
+# Final binary check
+if [ ! -f "/app/bin/hev-socks5-server" ]; then
+    log_error "hev-socks5-server binary not found at /app/bin/hev-socks5-server"
+    exit 1
+fi
+
+if [ ! -x "/app/bin/hev-socks5-server" ]; then
+    log_error "hev-socks5-server binary is not executable"
     exit 1
 fi
 
