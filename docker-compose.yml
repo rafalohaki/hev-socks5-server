@@ -18,31 +18,30 @@ services:
     image: hev-socks5-server:latest
     container_name: hev-socks5-server
     
-    # Restart policy
-    restart: unless-stopped
+    # Restart policy - disabled for debugging
+    restart: "no"
     
-    # Network mode: host for maximum performance
-    # Use host network for best SOCKS5 proxy performance
-    network_mode: "host"
+    # Network mode: bridge for debugging
+    # network_mode: "host"
     
-    # Port mapping not needed with host network
-    # ports:
-    #   - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/tcp"
-    #   - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/udp"
+    # Port mapping for bridge network
+    ports:
+      - "${SOCKS5_PORT:-1080}:${SOCKS5_PORT:-1080}/tcp"
+      - "${SOCKS5_PORT:-1080}:${SOCKS5_PORT:-1080}/udp"
     
     # Environment variables - customize in .env file
     environment:
-      - PORT=${SOCKS5_PORT:-2137}
+      - PORT=${SOCKS5_PORT:-1080}
       - LISTEN_ADDRESS=${LISTEN_ADDRESS:-::}
       - AUTH=${SOCKS5_AUTH:-}
       - TZ=${TIMEZONE:-Europe/Warsaw}
     
-    # Volume mounts for persistence
-    volumes:
+    # Volume mounts for persistence - disabled for debugging
+    # volumes:
       # Logs directory (persistent)
-      - ./logs:/app/logs:rw
+      # - ./logs:/app/logs:rw
       # Configuration for port 2137 (no runtime modifications needed)
-      - ./conf/main-2137.yml:/app/etc/hev-socks5-server.yml:ro
+      # - ./conf/main-2137.yml:/app/etc/hev-socks5-server.yml:ro
     
     # Security settings
     security_opt:
@@ -64,13 +63,13 @@ services:
           memory: 64M
           cpus: '0.1'
     
-    # Health check - simplified for host network
-    healthcheck:
-      test: ["CMD", "sh", "-c", "netstat -tlnp 2>/dev/null | grep :${SOCKS5_PORT:-2137} || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # Health check - disabled for debugging
+    # healthcheck:
+    #   test: ["CMD", "sh", "-c", "netstat -tlnp 2>/dev/null | grep :${SOCKS5_PORT:-2137} || exit 1"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
     
     # Logging configuration
     logging:

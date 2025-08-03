@@ -120,12 +120,36 @@ if [ -n "$AUTH" ]; then
         sed -i "s/#auth:/auth:/" "$TEMP_CONFIG"
         sed -i "s/#  username:/  username: $USERNAME/" "$TEMP_CONFIG"
         sed -i "s/#  password:/  password: $PASSWORD/" "$TEMP_CONFIG"
+        
+        # Update port if PORT environment variable is set
+        if [ -n "$PORT" ]; then
+            sed -i "s/port: [0-9]*/port: $PORT/" "$TEMP_CONFIG"
+            sed -i "s/udp-port: [0-9]*/udp-port: $PORT/" "$TEMP_CONFIG"
+        fi
+        
+        # Remove daemon mode for docker container
+        sed -i "/pid-file:/d" "$TEMP_CONFIG"
+        
         CONFIG_FILE="$TEMP_CONFIG"
         log_info "Authentication configured successfully"
     else
         log_warn "Could not modify config for auth. Consider using pre-configured file."
     fi
 else
+    # Even without AUTH, we might need to update the port
+    if [ -n "$PORT" ]; then
+        TEMP_CONFIG="/app/tmp/hev-socks5-server.yml"
+        mkdir -p /app/tmp
+        
+        if cp "$CONFIG_FILE" "$TEMP_CONFIG" 2>/dev/null; then
+            sed -i "s/port: [0-9]*/port: $PORT/" "$TEMP_CONFIG"
+            sed -i "s/udp-port: [0-9]*/udp-port: $PORT/" "$TEMP_CONFIG"
+            # Remove daemon mode for docker container
+            sed -i "/pid-file:/d" "$TEMP_CONFIG"
+            CONFIG_FILE="$TEMP_CONFIG"
+            log_info "Port configuration updated to: $PORT"
+        fi
+    fi
     log_info "Running without authentication (not recommended for production)"
 fi
 

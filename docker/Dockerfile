@@ -56,7 +56,7 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Create required directories with proper permissions
-RUN mkdir -p /app/{bin,etc,logs,tmp} && \
+RUN mkdir -p /app/bin /app/etc /app/logs /app/tmp && \
     chown -R socks5:socks5 /app
 
 # Copy the built application from builder stage
