@@ -102,21 +102,25 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
-# Apply configuration changes
+# Create a writable copy of config file to avoid "Resource busy" errors
+TEMP_CONFIG="/app/tmp/hev-socks5-server.yml"
+mkdir -p "$(dirname "$TEMP_CONFIG")"
+cp "$CONFIG_FILE" "$TEMP_CONFIG"
+
 log_info "Applying configuration..."
 
 if [ -n "$PORT" ] && [ "$PORT" != "1080" ]; then
     log_info "Setting port to: $PORT"
-    sed -i "s/port: 1080/port: $PORT/" "$CONFIG_FILE"
+    sed -i "s/port: 1080/port: $PORT/" "$TEMP_CONFIG"
     # Also update UDP port
-    sed -i "s/udp-port: 1080/udp-port: $PORT/" "$CONFIG_FILE"
+    sed -i "s/udp-port: 1080/udp-port: $PORT/" "$TEMP_CONFIG"
 fi
 
 if [ -n "$LISTEN_ADDRESS" ] && [ "$LISTEN_ADDRESS" != '::' ]; then
     log_info "Setting listen address to: $LISTEN_ADDRESS"
     # Escape special characters for sed
     escaped_addr=$(echo "$LISTEN_ADDRESS" | sed 's/[[\.*^$()+?{|]/\\&/g')
-    sed -i "s/listen-address: '::'/listen-address: '$escaped_addr'/" "$CONFIG_FILE"
+    sed -i "s/listen-address: '::'/listen-address: '$escaped_addr'/" "$TEMP_CONFIG"
 fi
 
 if [ -n "$AUTH" ]; then
@@ -125,12 +129,15 @@ if [ -n "$AUTH" ]; then
     log_info "Enabling authentication for user: $USERNAME"
     
     # Enable auth section
-    sed -i "s/#auth:/auth:/" "$CONFIG_FILE"
-    sed -i "s/#  username:/  username: $USERNAME/" "$CONFIG_FILE"
-    sed -i "s/#  password:/  password: $PASSWORD/" "$CONFIG_FILE"
+    sed -i "s/#auth:/auth:/" "$TEMP_CONFIG"
+    sed -i "s/#  username:/  username: $USERNAME/" "$TEMP_CONFIG"
+    sed -i "s/#  password:/  password: $PASSWORD/" "$TEMP_CONFIG"
 else
     log_info "Running without authentication (not recommended for production)"
 fi
+
+# Use the modified temp config
+CONFIG_FILE="$TEMP_CONFIG"
 
 # Set timezone if provided
 if [ -n "$TZ" ]; then

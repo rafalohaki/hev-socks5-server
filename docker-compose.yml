@@ -41,8 +41,10 @@ services:
     volumes:
       # Logs directory (persistent)
       - ./logs:/app/logs:rw
-      # Configuration override (optional)
+      # Configuration template (read-only, copied to writable location in entrypoint)
       - ./conf/main.yml:/app/etc/hev-socks5-server.yml:ro
+      # Temp directory for config modifications
+      - /tmp/hev-socks5:/app/tmp:rw
     
     # Security settings
     security_opt:
