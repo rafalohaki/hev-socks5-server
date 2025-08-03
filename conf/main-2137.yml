@@ -1,0 +1,51 @@
+# Main configuration for hev-socks5-server - Port 2137
+
+main:
+  # Worker threads - optimized for performance
+  workers: 8
+  # Listen port - set to 2137 for docker compose
+  port: 2137
+  # Listen address (ipv4|ipv6)
+  listen-address: '::'
+  # UDP listen port
+  udp-port: 2137
+  # UDP listen address (ipv4|ipv6)
+# udp-listen-address: '::1'
+  # Listen ipv6 only
+  listen-ipv6-only: false
+  # Bind source address (ipv4|ipv6)
+  # It is overridden by bind-address-v{4,6} if specified
+  bind-address: ''
+  # Bind source address (ipv4)
+  bind-address-v4: ''
+  # Bind source address (ipv6)
+  bind-address-v6: ''
+  # Bind source network interface
+  bind-interface: ''
+  # Domain address type (ipv4|ipv6|unspec)
+  domain-address-type: unspec
+  # Socket mark (hex: 0x1, dec: 1, oct: 01)
+  mark: 0
+
+#auth:
+#  file: conf/auth.txt
+#  username:
+#  password:
+
+misc:
+  # Task stack size (bytes) - increased for better performance
+  task-stack-size: 16384
+  # UDP recv buffer size (bytes) - optimized for high throughput
+  udp-recv-buffer-size: 1048576
+  # Connect timeout (ms) - faster connection establishment
+  connect-timeout: 3000
+  # Read-write timeout (ms) - optimized for stability
+  read-write-timeout: 30000
+  # Log output - file for better performance than stderr
+  log-file: /app/logs/socks5.log
+  # Log level - info for monitoring without debug overhead
+  log-level: info
+  # If present, run as a daemon with this pid file
+  pid-file: /app/socks5.pid
+  # Increase file descriptor limit for high concurrency
+  limit-nofile: 100000

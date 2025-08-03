@@ -41,10 +41,8 @@ services:
     volumes:
       # Logs directory (persistent)
       - ./logs:/app/logs:rw
-      # Configuration template (read-only, copied to writable location in entrypoint)
-      - ./conf/main.yml:/app/etc/hev-socks5-server.yml:ro
-      # Temp directory for config modifications
-      - /tmp/hev-socks5:/app/tmp:rw
+      # Configuration for port 2137 (no runtime modifications needed)
+      - ./conf/main-2137.yml:/app/etc/hev-socks5-server.yml:ro
     
     # Security settings
     security_opt:

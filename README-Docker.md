@@ -2,17 +2,16 @@
 
 ## Szybki start
 
-1. **Skopiuj przykład konfiguracji:**
+1. **Opcjonalnie ustaw hasło (zalecane dla bezpieczeństwa):**
 ```bash
-cp env.example .env
-```
-
-2. **Edytuj konfigurację:**
-```bash
+# Edytuj plik .env i ustaw SOCKS5_AUTH
 nano .env
+
+# Przykład:
+echo "SOCKS5_AUTH=admin:$(openssl rand -base64 16)" >> .env
 ```
 
-3. **Uruchom serwer:**
+2. **Uruchom serwer:**
 ```bash
 # Zatrzymaj poprzednie instancje
 docker compose down
@@ -22,6 +21,15 @@ docker compose build
 
 # Uruchom w tle
 docker compose up -d
+```
+
+3. **Sprawdź czy działa:**
+```bash
+# Test połączenia
+docker compose logs -f
+
+# Test SOCKS5
+curl --socks5 admin:password@localhost:2137 http://httpbin.org/ip
 ```
 
 ## Podstawowe komendy
