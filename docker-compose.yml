@@ -21,10 +21,14 @@ services:
     # Restart policy
     restart: unless-stopped
     
-    # Port mapping - change left side to your desired host port
-    ports:
-      - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/tcp"
-      - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/udp"
+    # Network mode: host for maximum performance
+    # Use host network for best SOCKS5 proxy performance
+    network_mode: "host"
+    
+    # Port mapping not needed with host network
+    # ports:
+    #   - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/tcp"
+    #   - "${SOCKS5_PORT:-2137}:${SOCKS5_PORT:-2137}/udp"
     
     # Environment variables - customize in .env file
     environment:
@@ -60,9 +64,9 @@ services:
           memory: 64M
           cpus: '0.1'
     
-    # Health check
+    # Health check - simplified for host network
     healthcheck:
-      test: ["CMD", "netstat", "-tlnp", "2>/dev/null", "|", "grep", ":${SOCKS5_PORT:-2137}"]
+      test: ["CMD", "sh", "-c", "netstat -tlnp 2>/dev/null | grep :${SOCKS5_PORT:-2137} || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -75,15 +79,14 @@ services:
         max-size: "10m"
         max-file: "3"
     
-    # Network configuration
-    networks:
-      - socks5-network
+    # No custom networks needed with host networking
 
 # Optional: monitoring service with basic stats
   watchtower:
     image: containrrr/watchtower:latest
     container_name: socks5-watchtower
     restart: unless-stopped
+    network_mode: "host"  # Use host network for monitoring too
     environment:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=86400  # Check daily
@@ -93,17 +96,16 @@ services:
     command: hev-socks5-server
     profiles:
       - monitoring
-    networks:
-      - socks5-network
 
-# Custom network for isolation
-networks:
-  socks5-network:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.20.0.0/16
+# Alternative bridge network configuration (if you prefer isolation over performance)
+# Uncomment the networks section and change network_mode to use custom network instead
+# networks:
+#   socks5-network:
+#     driver: bridge
+#     ipam:
+#       driver: default
+#       config:
+#         - subnet: 172.20.0.0/16
 
 # Named volumes for data persistence
 volumes:
